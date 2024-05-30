@@ -1,3 +1,5 @@
+using Spectre.Console;
+
 namespace UnityOps.Structs
 {
     public struct UnityProject(string projectName, string unityProjectDirectory, string projectEditorVersion)
@@ -8,8 +10,14 @@ namespace UnityOps.Structs
 
         public static UnityProject FindProjectByProjectName(string projectName, List<UnityProject> unityProjects)
         {
-            return unityProjects
-                .FirstOrDefault(project => project.projectName == projectName);
+            if (unityProjects == null)
+            {
+                AnsiConsole.MarkupLine("[red] Unity Projects list is null[/]\n [yellow]Check your config and try running UnityOps -f[/]");
+                return default;
+            }
+
+            return unityProjects.FirstOrDefault(project => project.projectName == projectName);
+
         }
     }
 }

@@ -1,5 +1,4 @@
-﻿using System.Runtime.InteropServices;
-using Spectre.Console;
+﻿using Spectre.Console;
 using UnityOps.Utilities;
 
 namespace UnityOps;
@@ -18,20 +17,18 @@ public class Program
     static SettingsModel unsavedData = new();
     static readonly string defaultSettingsPath = Path.Combine(Environment.CurrentDirectory, "Settings.json");
 
-    static string defaultUnityEditorPath;
-
 
     /* ---------------------------------------------------
                         TODO
             Add descriptions to all foundations 
             test if Opening unity on linux works
-            Fix the space in the Configurator
             ------------------------------------------
+            Make a function to make adding arg more modular 
             Make All function stop using Program.savedData and pass in the prams require 
             for better code readability and  maintainability
             ------------------------------------------
             Add some docs
-            Add Read me
+            Fix the space in the Configurator
             Fix Error when change configuration location
             Fix get proper permission for saving configuration file in custom directory. Known issue on linux and Window.
 
@@ -78,19 +75,24 @@ public class Program
         }
         if (args.Contains("-o") || args.Contains("-open"))
         {
-            string projectName = SelectProjectToOpenFromName();
+            string projectName = InputUtility.SelectionPrompt("Which Project to open?", savedData.UnityProjects, project => project.projectName);
             AnsiConsole.MarkupLine($"[green]Opening {projectName}[/]");
-            UnityProjectUtility.OpenUnityProject(projectName);
+
+            unsavedData.LastProjectOpenedName = UnityProjectUtility.OpenUnityProject(projectName);
+            await DataManager.UpdateJsonSectionAsync(unsavedData.LastProjectOpenedName, nameof(unsavedData.LastProjectOpenedName), savedData.ConfigFilePath);
+            Environment.Exit(0);
+        }
+        if (args.Contains("-a") || args.Contains("-auto"))
+        {
+            if (savedData != null)
+                unsavedData.autoOpenRecentProject = !savedData.autoOpenRecentProject;
+
+            Console.WriteLine($"Auto Open Recent Project is {unsavedData.autoOpenRecentProject}");
+            await DataManager.UpdateJsonSectionAsync(unsavedData.autoOpenRecentProject, nameof(unsavedData.autoOpenRecentProject), savedData.ConfigFilePath);
 
             Environment.Exit(0);
         }
         #endregion
-
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            defaultUnityEditorPath = "C:/Program Files/Unity/Hub/Editor/";
-
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            defaultUnityEditorPath = "/Applications/Unity/Hub/Editor/";
 
         if (savedData == null)
         {
@@ -108,38 +110,13 @@ public class Program
         }
 
 
-        AnsiConsole.WriteLine("\n\n");
-
-        // string projectName = SelectProjectToOpenFromName();
-        // Console.WriteLine(projectName);
-        // UnityProjectUtility.OpenUnityProject(projectName);
-
-
-        AnsiConsole.WriteLine("\n\n");
-    }
-
-    private static string SelectProjectToOpenFromName()
-    {
-        var choicesList = new List<string>();
-
-        foreach (var project in savedData.UnityProjects)
-            choicesList.Add(project.projectName);
-
-        string[] choices = choicesList.ToArray();
-
-        string ProjectToOpen = AnsiConsole.Prompt(
-            new SelectionPrompt<string>()
-                .Title("Which Project to open?")
-                .PageSize(10)
-                .MoreChoicesText("[blue](Move up and down to reveal more projects)[/]")
-                .AddChoices(choices));
-
-        return ProjectToOpen;
+        if (savedData.autoOpenRecentProject)
+            UnityProjectUtility.OpenUnityProject(savedData.LastProjectOpenedName);
     }
 
     private static async Task FindUnityProjectsAndEditors()
     {
-        AnsiConsole.MarkupLine("Searching...\n\n");
+        AnsiConsole.MarkupLine("[green]Searching...\n[/]");
         unsavedData.UnityProjects = await UnityProjectUtility.FindUnityProjects();
 
         var projectsTable = new Table();
@@ -155,11 +132,9 @@ public class Program
 
         AnsiConsole.Write(projectsTable);
 
-
+        AnsiConsole.MarkupLine("\n");
         unsavedData.UnityEditors = UnityEditorUtility.FindUnityEngines();
 
-        foreach (var editor in unsavedData.UnityEditors)
-            UnityEditorUtility.GetProjectsMadeWithEditor(unsavedData.UnityProjects, editor);
 
 
         var editorsTable = new Table();
@@ -174,17 +149,20 @@ public class Program
 
         foreach (var editor in unsavedData.UnityEditors)
         {
-            editorsTable.AddRow(editor.editorExecutableDirectory, editor.editorVersion, editor.projects.Count.ToString());
+
+            int ProjectsMadeWithEditor = UnityEditorUtility.GetProjectsMadeWithEditor(unsavedData.UnityProjects, editor);
+            editorsTable.AddRow(editor.editorExecutableDirectory, editor.editorVersion, ProjectsMadeWithEditor.ToString());
         }
+
 
         AnsiConsole.Write(editorsTable);
 
-        AnsiConsole.MarkupLine($"[green]Done ![/]");
+        AnsiConsole.MarkupLine($"[green]Done![/]");
 
 
         AnsiConsole.WriteLine("\n");
-        AnsiConsole.MarkupLine($"[blue]{unsavedData.UnityProjects.Count} Projects was found[/]");
-        AnsiConsole.MarkupLine($"[blue]{unsavedData.UnityEditors.Count} Editors was found[/]");
+        AnsiConsole.MarkupLine($"[blue]{unsavedData.UnityProjects.Count} Projects where found[/]");
+        AnsiConsole.MarkupLine($"[blue]{unsavedData.UnityEditors.Count} Editors where found[/]");
         AnsiConsole.WriteLine("\n");
     }
 }

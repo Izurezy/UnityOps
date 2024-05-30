@@ -7,7 +7,9 @@ public class SettingsModel
 {
     public string UnityProjectsRootDirectory = "";
     public string ProjectVersionDefaultFilePath = $"ProjectSettings{Path.DirectorySeparatorChar}ProjectVersion.txt";
-    public string UnityEditorsDirectory = "C:/Program Files/Unity/Hub/Editor";
+    public string UnityEditorsDirectory = string.Empty;
+    public string LastProjectOpenedName = string.Empty;
+    public bool autoOpenRecentProject = false;
     public List<UnityProject> UnityProjects = new();
     public List<UnityEditor> UnityEditors = new();
     public string ConfigFilePath = Path.Combine(Environment.CurrentDirectory, "Settings.json");
@@ -44,6 +46,8 @@ public class SettingsModel
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             unsavedData.UnityEditorsDirectory = "Applications/Unity/Hub/Editor/";
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            unsavedData.UnityEditorsDirectory = "C:/Program Files/Unity/Hub/Editor";
 
         //e.g. Windows: "C:/Program Files/Unity/Hub/Editor"
         unsavedData.UnityEditorsDirectory = AnsiConsole.Prompt(

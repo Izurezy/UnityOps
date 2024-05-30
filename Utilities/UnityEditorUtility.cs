@@ -12,11 +12,8 @@ namespace UnityOps.Utilities
             //Windows  C:/Program Files/Unity/Hub/Editor/<version>/Editor/Unity.exe" -projectPath "<project path>
             //Linux   Applications/Unity/Hub/Editor/<version>/Unity.app/Contents/Linux/Unity -projectPath <project path>
             List<UnityEditor> editors = new();
-            UnityEditor unityEditor = new()
-            {
-                //isn't initiated in the struct
-                projects = []
-            };
+            UnityEditor unityEditor = new();
+
 
             try
             {
@@ -66,16 +63,21 @@ namespace UnityOps.Utilities
             }
         }
 
-        public static void GetProjectsMadeWithEditor(List<UnityProject> unityProjects, UnityEditor unityEditors)
+        public static int GetProjectsMadeWithEditor(List<UnityProject> unityProjects, UnityEditor unityEditor)
         {
+            int ProjectsMadeWithEditor = 0;
+
             foreach (var project in unityProjects)
             {
-                if (project.projectEditorVersion == unityEditors.editorVersion && project.projectEditorVersion != null && unityEditors.editorVersion != null)
-                    unityEditors.projects.Add(project);
+                if (project.projectEditorVersion == unityEditor.editorVersion && project.projectEditorVersion != null && unityEditor.editorVersion != null)
+                    ProjectsMadeWithEditor++;
+
                 else if (Program.isDebugging)
                     // Handle the case when no matching editor is found
                     AnsiConsole.MarkupLine($"[yellow]No matching editor found for project version {project.projectEditorVersion}[/]");
             }
+
+            return ProjectsMadeWithEditor;
         }
 
 

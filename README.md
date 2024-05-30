@@ -25,6 +25,7 @@ To start using UnityOps, follow these simple steps:
 
 - `config` Initiate the configuration process.<br/>
 - `-o or -open` Displays a selectable list of projects found that you can open.<br/>
+- `-a or -auto` Enables auto launching for the last project selected when `UnityOps -o or -open` was ran<br/>
 - `-f or -find` Locate and display all discovered projects and editors along with their version numbers and the number of projects associated with each editor.<br/>
 - `-d or -debug` Enables debugging mode<br/>
 - `-h or -help` Shows a table of available commands<br/>
