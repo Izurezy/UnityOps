@@ -5,20 +5,20 @@ using UnityOps.Structs;
 namespace UnityOps;
 public class SettingsModel
 {
-    public string UnityProjectsRootDirectory = "";
-    public string ProjectVersionDefaultFilePath = $"ProjectSettings{Path.DirectorySeparatorChar}ProjectVersion.txt";
-    public string UnityEditorsDirectory = string.Empty;
-    public string LastProjectOpenedName = string.Empty;
-    public bool autoOpenRecentProject = false;
-    public List<UnityProject> UnityProjects = new();
-    public List<UnityEditor> UnityEditors = new();
-    public string ConfigFilePath = Path.Combine(Environment.CurrentDirectory, "Settings.json");
+    public string unityProjectsRootDirectory = "";
+    public string projectVersionDefaultFilePath = $"ProjectSettings{Path.DirectorySeparatorChar}ProjectVersion.txt";
+    public string unityEditorsRootDirectory = string.Empty;
+    public string lastProjectOpenedName = string.Empty;
+    public bool shouldOpenRecentProject = false;
+    public List<UnityProject> unityProjects = new();
+    public List<UnityEditor> unityEditors = new();
+    public string configFilePath = Path.Combine(Environment.CurrentDirectory, "Settings.json");
 
-    public static async Task<SettingsModel> ConfigureSettings()
+    public static async Task ConfigureSettings(SettingsModel savedData)
     {
         SettingsModel unsavedData = new();
 
-        unsavedData.UnityProjectsRootDirectory = AnsiConsole.Prompt(
+        unsavedData.unityProjectsRootDirectory = AnsiConsole.Prompt(
             new TextPrompt<string>($"Specify the where your Unity projects are:")
             .Validate(filePath =>
             {
@@ -30,10 +30,10 @@ public class SettingsModel
         ));
 
         //e.g. UnityProjectsRootDirectory / Project / ProjectSettings / ProjectVersion
-        unsavedData.ProjectVersionDefaultFilePath = AnsiConsole.Prompt(
+        unsavedData.projectVersionDefaultFilePath = AnsiConsole.Prompt(
             new TextPrompt<string>($"Default ProjectVersion Directory for all projects [blue][[Default]][/]")
             .DefaultValueStyle("blue")
-            .DefaultValue(unsavedData.ProjectVersionDefaultFilePath)
+            .DefaultValue(unsavedData.projectVersionDefaultFilePath)
             .Validate(filePath =>
             {
 
@@ -45,15 +45,15 @@ public class SettingsModel
         ));
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            unsavedData.UnityEditorsDirectory = "Applications/Unity/Hub/Editor/";
+            unsavedData.unityEditorsRootDirectory = "Applications/Unity/Hub/Editor/";
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            unsavedData.UnityEditorsDirectory = "C:/Program Files/Unity/Hub/Editor";
+            unsavedData.unityEditorsRootDirectory = "C:/Program Files/Unity/Hub/Editor";
 
         //e.g. Windows: "C:/Program Files/Unity/Hub/Editor"
-        unsavedData.UnityEditorsDirectory = AnsiConsole.Prompt(
+        unsavedData.unityEditorsRootDirectory = AnsiConsole.Prompt(
             new TextPrompt<string>($"Directory with Unity Editors are installed[blue][[Default]][/]")
             .DefaultValueStyle("blue")
-            .DefaultValue(unsavedData.UnityEditorsDirectory)
+            .DefaultValue(unsavedData.unityEditorsRootDirectory)
             .Validate(filePath =>
             {
                 if (Directory.Exists(filePath))
@@ -63,10 +63,10 @@ public class SettingsModel
             }
         ));
 
-        unsavedData.ConfigFilePath = AnsiConsole.Prompt(
+        unsavedData.configFilePath = AnsiConsole.Prompt(
             new TextPrompt<string>($"Enter the directory where the configuration is saved [blue][[Default]][/]")
             .DefaultValueStyle("blue")
-            .DefaultValue(unsavedData.ConfigFilePath)
+            .DefaultValue(unsavedData.configFilePath)
             .Validate(directory =>
             {
                 if (Directory.Exists(directory))
@@ -86,10 +86,10 @@ public class SettingsModel
         table.AddColumn("Option");
         table.AddColumn("Path");
 
-        table.AddRow("Unity Projects Root Directory", unsavedData.UnityProjectsRootDirectory);
-        table.AddRow("ProjectVersion Default File Path", unsavedData.ProjectVersionDefaultFilePath);
-        table.AddRow("Unity Editors Directory", unsavedData.UnityEditorsDirectory);
-        table.AddRow("Config File Path", unsavedData.ConfigFilePath);
+        table.AddRow("Unity Projects Root Directory", unsavedData.unityProjectsRootDirectory);
+        table.AddRow("ProjectVersion Default File Path", unsavedData.projectVersionDefaultFilePath);
+        table.AddRow("Unity Editors Directory", unsavedData.unityEditorsRootDirectory);
+        table.AddRow("Config File Path", unsavedData.configFilePath);
 
         AnsiConsole.Write(table);
 
@@ -100,20 +100,20 @@ public class SettingsModel
         {
             AnsiConsole.MarkupLine("[green]Saving To File...![/]");
 
-            if (Program.savedData == null)
-                await DataManager.SaveToJsonFileAsync(unsavedData, unsavedData.ConfigFilePath);
-
+            if (savedData == null)
+                await DataManager.SaveToJsonFileAsync(unsavedData, unsavedData.configFilePath);
             else
             {
-                await DataManager.UpdateJsonSectionAsync(unsavedData.UnityProjectsRootDirectory, nameof(unsavedData.UnityProjectsRootDirectory), unsavedData.ConfigFilePath);
-                await DataManager.UpdateJsonSectionAsync(unsavedData.ProjectVersionDefaultFilePath, nameof(unsavedData.ProjectVersionDefaultFilePath), unsavedData.ConfigFilePath);
-                await DataManager.UpdateJsonSectionAsync(unsavedData.UnityEditorsDirectory, nameof(unsavedData.UnityEditorsDirectory), unsavedData.ConfigFilePath);
+                await DataManager.UpdateJsonSectionAsync(unsavedData.unityProjectsRootDirectory, nameof(unsavedData.unityProjectsRootDirectory), unsavedData.configFilePath);
+                await DataManager.UpdateJsonSectionAsync(unsavedData.projectVersionDefaultFilePath, nameof(unsavedData.projectVersionDefaultFilePath), unsavedData.configFilePath);
+                await DataManager.UpdateJsonSectionAsync(unsavedData.unityEditorsRootDirectory, nameof(unsavedData.unityEditorsRootDirectory), unsavedData.configFilePath);
 
-                if (Path.Exists(Program.savedData?.ConfigFilePath))
-                    File.Delete(Program.savedData.ConfigFilePath);
+                //Deletes the old config File
+                // if (Path.Exists(savedData?.ConfigFilePath))
+                // File.Delete(savedData.ConfigFilePath);
 
-                string SettingsFile = Path.Combine(unsavedData.ConfigFilePath, "Settings.json");
-                if (!Path.Exists(unsavedData.ConfigFilePath) || !File.Exists(SettingsFile))
+                string SettingsFile = Path.Combine(unsavedData.configFilePath, "Settings.json");
+                if (Path.Exists(unsavedData.configFilePath) && !File.Exists(SettingsFile))
                 {
                     try
                     {
@@ -125,12 +125,9 @@ public class SettingsModel
                         AnsiConsole.WriteException(ex);
                     }
                 }
-                await DataManager.UpdateJsonSectionAsync(unsavedData.ConfigFilePath, nameof(unsavedData.ConfigFilePath), unsavedData.ConfigFilePath);
+                await DataManager.UpdateJsonSectionAsync(unsavedData.configFilePath, nameof(unsavedData.configFilePath), unsavedData.configFilePath);
             }
-
         }
-
-
-        return unsavedData;
+        // return unsavedData;
     }
 }

@@ -1,6 +1,4 @@
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using Spectre.Console;
 using UnityOps.Structs;
 
@@ -9,15 +7,19 @@ namespace UnityOps.Utilities
     public class UnityProjectUtility
     {
         private static readonly string ProjectVersionFile = "ProjectVersion.txt";
-        public static async Task<List<UnityProject>> FindUnityProjects()
+        public static async Task<List<UnityProject>> FindUnityProjects(string unityProjectsRootDirectory, string projectVersionDefaultFilePath)
         {
             List<UnityProject> unityProjects = new();
             string[] SubDirectories = Array.Empty<string>();
+
+            if (string.IsNullOrEmpty(unityProjectsRootDirectory))
+                AnsiConsole.MarkupLine("[red]Unity Projects Root Directory is null![/]");
+
             try
             {
 
-                if (Directory.Exists(Program.savedData.UnityProjectsRootDirectory))
-                    SubDirectories = Directory.GetDirectories(Program.savedData.UnityProjectsRootDirectory);
+                if (Directory.Exists(unityProjectsRootDirectory))
+                    SubDirectories = Directory.GetDirectories(unityProjectsRootDirectory);
                 else
                 {
                     AnsiConsole.MarkupLine("[red]Unity Projects Directory not found, use UnityOps -config[/]");
@@ -35,7 +37,7 @@ namespace UnityOps.Utilities
                         projectName = Path.GetFileName(subDirectory.TrimEnd(Path.DirectorySeparatorChar))
                     };
 
-                    var versionNumber = await FindProjectVersionFileAsync(subDirectory);
+                    var versionNumber = await FindProjectVersionFileAsync(subDirectory, projectVersionDefaultFilePath);
 
                     unityProject.projectEditorVersion = string.IsNullOrEmpty(versionNumber) ? "Not Found" : versionNumber;
 
@@ -58,11 +60,18 @@ namespace UnityOps.Utilities
         // Does a recurse search from the project root directory and one subdirectory deep
         // e.g. MyUnityProjectRootDirectory / ProjectSettings / ProjectVersion.txt
         // It will not work if the subdirectory is MyUnityProjectRootDirectory / ProjectSettings / AnotherDirectory / ProjectVersion.txt
-        public static async Task<string> FindProjectVersionFileAsync(string filePath)
+
+        public static async Task<string> FindProjectVersionFileAsync(string filePath, string projectVersionDefaultFilePath)
         {
+            if (string.IsNullOrEmpty(projectVersionDefaultFilePath))
+            {
+                AnsiConsole.MarkupLine($"[red]project Version Default File Path is null, using Unity's default path ProjectSettings{Path.DirectorySeparatorChar}ProjectVersion.txt[/]");
+                projectVersionDefaultFilePath = $"ProjectSettings{Path.DirectorySeparatorChar}ProjectVersion.txt";
+            }
+
             try
             {
-                var fullPath = Path.Combine(filePath, Program.savedData.ProjectVersionDefaultFilePath);
+                var fullPath = Path.Combine(filePath, projectVersionDefaultFilePath);
                 string VersionNumber;
                 if (File.Exists(fullPath))
                 {
@@ -121,11 +130,12 @@ namespace UnityOps.Utilities
             return string.Empty;
         }
 
-        public static string OpenUnityProject(string projectName)
+        public static string OpenUnityProject(string projectName, List<UnityProject> unityProjects, List<UnityEditor> unityEditors)
         {
+            AnsiConsole.MarkupLine($"[green]Opening {projectName}[/]");
 
-            UnityProject project = UnityProject.FindProjectByProjectName(projectName, Program.savedData.UnityProjects);
-            UnityEditor editor = UnityEditor.FindEditorByProjectVersion(project.projectEditorVersion, Program.savedData.UnityEditors);
+            UnityProject project = UnityProject.FindProjectByProjectName(projectName, unityProjects);
+            UnityEditor editor = UnityEditor.FindEditorByProjectVersion(project.projectEditorVersion, unityEditors);
 
             if (editor.Equals(default(UnityEditor)))
             {
@@ -133,27 +143,17 @@ namespace UnityOps.Utilities
 
                 if (AnsiConsole.Confirm($"Do you want to open {projectName} with anyways a different Editor Version?", false))
                 {
-                    if (AnsiConsole.Confirm($"[yellow]Are you sure you want to change the project Editor Version,[/] [red]this may break things within the unity project!!!![/]", false))
-                    {
+                    var SelectedEditorVersion = InputUtility.SelectionPrompt("Which editor?", unityEditors, editor => editor.editorVersion);
 
+                    if (!string.IsNullOrEmpty(SelectedEditorVersion))
+                        Console.WriteLine($"Selected Editor Version: {SelectedEditorVersion}");
+                    else
+                        AnsiConsole.MarkupLine("[red]Selected Editor Version is null[/]");
 
-                        var SelectedEditorVersion = InputUtility.SelectionPrompt("Which editor?", Program.savedData.UnityEditors, editor => editor.editorVersion);
+                    editor = UnityEditor.FindEditorByProjectVersion(SelectedEditorVersion, unityEditors);
 
-                        if (!string.IsNullOrEmpty(SelectedEditorVersion))
-                            Console.WriteLine($"Selected Editor Version: {SelectedEditorVersion}");
-                        else
-                            AnsiConsole.MarkupLine("[red]Selected Editor Version is null[/]");
-
-                        editor = UnityEditor.FindEditorByProjectVersion(SelectedEditorVersion, Program.savedData.UnityEditors);
-                        //warn the users
-                        /*
-                            ---------------------------------------
-                                Warn the user before processing 
-                            ---------------------------------------
-                        */
-                        if (Program.isDebugging)
-                            AnsiConsole.MarkupLine($"Opening {projectName} with Editor Version: {editor.editorVersion} , Executable Directory {editor.editorExecutableDirectory}");
-                    }
+                    if (Program.isDebugging)
+                        AnsiConsole.MarkupLine($"Opening {projectName} with Editor Version: {editor.editorVersion} , Executable Directory {editor.editorExecutableDirectory}");
                 }
             }
 
@@ -167,19 +167,16 @@ namespace UnityOps.Utilities
                     RedirectStandardError = true,
                     RedirectStandardOutput = true,
                     UseShellExecute = false,
-                    CreateNoWindow = true,
+                    CreateNoWindow = false,
+
                 };
                 AnsiConsole.MarkupLine($"[green]Starting editor[/] {editor.editorVersion}");
                 using Process process = Process.Start(startInfo);
-
-                string output = process.StandardOutput.ReadToEnd();
-                Console.WriteLine($"output {output}");
 
                 string error = process.StandardError.ReadToEnd();
                 if (!string.IsNullOrEmpty(error))
                     Console.WriteLine($"Error {error} ");
 
-                process.WaitForExit();
                 AnsiConsole.MarkupLine($"[green]Successfully opened {projectName} with Editor {editor.editorVersion}[/]");
 
                 return project.projectName;

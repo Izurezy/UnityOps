@@ -1,7 +1,6 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Spectre.Console;
-using UnityOps.Structs;
 
 namespace UnityOps;
 
