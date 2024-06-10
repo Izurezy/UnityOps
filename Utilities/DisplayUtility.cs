@@ -16,7 +16,7 @@ namespace UnityOps.Utilities
             projectsTable.SafeBorder();
 
             foreach (var project in unityProjects)
-                projectsTable.AddRow(project.projectName, project.unityProjectDirectory, project.projectEditorVersion);
+                projectsTable.AddRow(project.name, project.projectDirectory, project.projectEditorVersion);
 
             AnsiConsole.Write(projectsTable);
         }
@@ -35,7 +35,7 @@ namespace UnityOps.Utilities
             {
                 //improve this somehow???
                 int ProjectsMadeWithEditor = UnityEditorUtility.GetProjectsMadeWithEditor(unityProjects, editor);
-                editorsTable.AddRow(editor.editorExecutableDirectory, editor.editorVersion, ProjectsMadeWithEditor.ToString());
+                editorsTable.AddRow(editor.executableDirectory, editor.version, ProjectsMadeWithEditor.ToString());
             }
 
             AnsiConsole.Write(editorsTable);

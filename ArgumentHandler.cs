@@ -6,29 +6,30 @@ namespace UnityOps
     public class ArgumentHandler
     {
         private static SettingsModel savedData;
-        private static SettingsModel unsavedData;
+        private static SettingsModel unsavedData = new();
 
         public static async Task CheckArgsAsync(string[] args, SettingsModel SavedData)
         {
+            savedData = SavedData;
             if (savedData != null)
             {
-                savedData = SavedData;
                 ExecuteIfArgumentPresent(args, ["-d", "-debug"], () => Program.isDebugging = true);
                 ExecuteIfArgumentPresent(args, ["-h", "-help"], HelpMessage, true);
                 await ExecuteIfArgumentPresentAsync(args, ["-config"], async () => await SettingsModel.ConfigureSettings(savedData), true);
-                await ExecuteIfArgumentPresentAsync(args, ["-f", "-find"], FindUnityProjectsAndEditors, false);
-                await ExecuteIfArgumentPresentAsync(args, ["-a", "-auto"], ToggleShouldOpenRecentProject, false);
-                await ExecuteIfArgumentPresentAsync(args, ["-o", "-open"], OpenProjectAsync, false);
+                await ExecuteIfArgumentPresentAsync(args, ["-f", "-find"], FindUnityProjectsAndEditorsAndDisplay, false);
+                await ExecuteIfArgumentPresentAsync(args, ["-a", "-auto"], ToggleShouldOpenRecentProject, true);
+                await ExecuteIfArgumentPresentAsync(args, ["-o", "-open"], OpenProjectAsync, true);
             }
-            else
+            else if (savedData == null)
                 AnsiConsole.MarkupLine($"[red]Saved Data is null, please run UnityOps -config[/]");
         }
+
 
         #region  Arguments Methods
         private static async Task ToggleShouldOpenRecentProject()
         {
-            if (savedData != null)
-                unsavedData.shouldOpenRecentProject = !savedData.shouldOpenRecentProject;
+            Console.WriteLine($"Before toggle: {savedData.shouldOpenRecentProject}");
+            unsavedData.shouldOpenRecentProject = !savedData.shouldOpenRecentProject;
 
             Console.WriteLine($"Open Recent Project is {unsavedData.shouldOpenRecentProject}");
             await DataManager.UpdateJsonSectionAsync(unsavedData.shouldOpenRecentProject, nameof(unsavedData.shouldOpenRecentProject), savedData.configFilePath);
@@ -36,28 +37,16 @@ namespace UnityOps
         private static async Task OpenProjectAsync()
         {
             Console.WriteLine("Open projects");
-            if (savedData.shouldOpenRecentProject)
-            {
-                unsavedData.lastProjectOpenedName = UnityProjectUtility.OpenUnityProject(savedData.lastProjectOpenedName, savedData.unityProjects, savedData.unityEditors);
-                return;
-            }
 
-
-            string projectName = InputUtility.SelectionPrompt("Which Project to open?", savedData.unityProjects, project => project.projectName);
-            unsavedData.lastProjectOpenedName = UnityProjectUtility.OpenUnityProject(projectName, savedData.unityProjects, savedData.unityEditors);
+            unsavedData.lastProjectOpenedName = UnityProjectUtility.OpenUnityProject(savedData.unityProjects, savedData.unityEditors, savedData.shouldOpenRecentProject, savedData.lastProjectOpenedName);
             await DataManager.UpdateJsonSectionAsync(unsavedData.lastProjectOpenedName, nameof(unsavedData.lastProjectOpenedName), savedData.configFilePath);
         }
-        private static async Task FindUnityProjectsAndEditors()
+        private static async Task FindUnityProjectsAndEditorsAndDisplay()
         {
-            AnsiConsole.MarkupLine("[green]Searching...\n[/]");
-            unsavedData.unityProjects = await UnityProjectUtility.FindUnityProjects(savedData.unityProjectsRootDirectory, savedData.projectVersionDefaultFilePath);
-            unsavedData.unityEditors = UnityEditorUtility.FindUnityEngines(savedData.unityEditorsRootDirectory);
-
-            await DataManager.UpdateJsonSectionAsync(unsavedData.unityProjects, nameof(unsavedData.unityProjects), savedData.configFilePath);
-            await DataManager.UpdateJsonSectionAsync(unsavedData.unityEditors, nameof(unsavedData.unityEditors), savedData.configFilePath);
-
+            (unsavedData.unityProjects, unsavedData.unityEditors) = await Program.FindUnityProjectsAndEditors();
             DisplayUtility.DisplayEditorsAndProjectInTable(unsavedData.unityEditors, unsavedData.unityProjects);
         }
+
         private static void HelpMessage()
         {
             var table = new Table();

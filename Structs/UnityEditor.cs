@@ -2,20 +2,20 @@ using Spectre.Console;
 
 namespace UnityOps.Structs
 {
-    public struct UnityEditor(string editorExecutableDirectory, string engineVersion)
+    public struct UnityEditor(string executableDirectory, string version)
     {
-        public string editorExecutableDirectory = editorExecutableDirectory;
-        public string editorVersion = engineVersion;
+        public string executableDirectory = executableDirectory;
+        public string version = version;
 
-        public static UnityEditor FindEditorByProjectVersion(string projectEditorVersion, List<UnityEditor> unityEditors)
+        public static UnityEditor FindEditorByProjectVersion(string projectEditorVersion, List<UnityEditor> editors)
         {
-            if (unityEditors == null)
+            if (editors == null)
             {
                 AnsiConsole.MarkupLine("[red] Unity Editor list is null[/]\n [yellow]Check your config and try running UnityOps -f[/]");
                 return default;
             }
 
-            return unityEditors.FirstOrDefault(editor => editor.editorVersion == projectEditorVersion);
+            return editors.FirstOrDefault(editor => editor.version == projectEditorVersion);
         }
     }
 }

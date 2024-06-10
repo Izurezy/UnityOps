@@ -33,8 +33,8 @@ namespace UnityOps.Utilities
 
                     UnityProject unityProject = new()
                     {
-                        unityProjectDirectory = subDirectory,
-                        projectName = Path.GetFileName(subDirectory.TrimEnd(Path.DirectorySeparatorChar))
+                        projectDirectory = subDirectory,
+                        name = Path.GetFileName(subDirectory.TrimEnd(Path.DirectorySeparatorChar))
                     };
 
                     var versionNumber = await FindProjectVersionFileAsync(subDirectory, projectVersionDefaultFilePath);
@@ -42,7 +42,7 @@ namespace UnityOps.Utilities
                     unityProject.projectEditorVersion = string.IsNullOrEmpty(versionNumber) ? "Not Found" : versionNumber;
 
                     if (Program.isDebugging)
-                        AnsiConsole.MarkupLine($"[yellow][[Unity Project Directory]][/] {unityProject.unityProjectDirectory}\n[yellow][[Project Version]][/] {unityProject.projectEditorVersion}\n");
+                        AnsiConsole.MarkupLine($"[green][[Unity Project Directory]][/] {unityProject.projectDirectory}\n[green][[Project Version]][/] {unityProject.projectEditorVersion}\n");
 
                     if (unityProject.projectEditorVersion != null && unityProject.projectEditorVersion != "Not Found")
                         unityProjects.Add(unityProject);
@@ -130,8 +130,11 @@ namespace UnityOps.Utilities
             return string.Empty;
         }
 
-        public static string OpenUnityProject(string projectName, List<UnityProject> unityProjects, List<UnityEditor> unityEditors)
+        public static string OpenUnityProject(List<UnityProject> unityProjects, List<UnityEditor> unityEditors, bool shouldOpenRecentProject = false, string lastProjectOpenedName = null)
         {
+
+            string projectName = shouldOpenRecentProject ? lastProjectOpenedName : InputUtility.ListItemsForSelectionPrompt("Which Project to open?", unityProjects, project => project.name);
+
             AnsiConsole.MarkupLine($"[green]Opening {projectName}[/]");
 
             UnityProject project = UnityProject.FindProjectByProjectName(projectName, unityProjects);
@@ -139,11 +142,11 @@ namespace UnityOps.Utilities
 
             if (editor.Equals(default(UnityEditor)))
             {
-                AnsiConsole.MarkupLine($"[red] No Editor is the same version as [yellow]{projectName}[/], Project Editor Version: [yellow]{project.projectEditorVersion}[/][/]");
+                AnsiConsole.MarkupLine($"[red] No Editor is the same version as [green]{projectName}[/], Project Editor Version: [green]{project.projectEditorVersion}[/][/]");
 
                 if (AnsiConsole.Confirm($"Do you want to open {projectName} with anyways a different Editor Version?", false))
                 {
-                    var SelectedEditorVersion = InputUtility.SelectionPrompt("Which editor?", unityEditors, editor => editor.editorVersion);
+                    var SelectedEditorVersion = InputUtility.ListItemsForSelectionPrompt("Which editor?", unityEditors, editor => editor.version);
 
                     if (!string.IsNullOrEmpty(SelectedEditorVersion))
                         Console.WriteLine($"Selected Editor Version: {SelectedEditorVersion}");
@@ -153,7 +156,7 @@ namespace UnityOps.Utilities
                     editor = UnityEditor.FindEditorByProjectVersion(SelectedEditorVersion, unityEditors);
 
                     if (Program.isDebugging)
-                        AnsiConsole.MarkupLine($"Opening {projectName} with Editor Version: {editor.editorVersion} , Executable Directory {editor.editorExecutableDirectory}");
+                        AnsiConsole.MarkupLine($"Opening {projectName} with Editor Version: {editor.version} , Executable Directory {editor.executableDirectory}");
                 }
             }
 
@@ -162,24 +165,24 @@ namespace UnityOps.Utilities
                 ProcessStartInfo startInfo = new()
                 {
                     //engineExecutablePath -projectPath UnityProjectPath
-                    FileName = editor.editorExecutableDirectory,
-                    Arguments = $" -projectPath \"{project.unityProjectDirectory}\" ",
+                    FileName = editor.executableDirectory,
+                    Arguments = $" -projectPath \"{project.projectDirectory}\" ",
                     RedirectStandardError = true,
                     RedirectStandardOutput = true,
                     UseShellExecute = false,
                     CreateNoWindow = false,
 
                 };
-                AnsiConsole.MarkupLine($"[green]Starting editor[/] {editor.editorVersion}");
+                AnsiConsole.MarkupLine($"[green]Starting editor[/] {editor.version}");
                 using Process process = Process.Start(startInfo);
 
                 string error = process.StandardError.ReadToEnd();
                 if (!string.IsNullOrEmpty(error))
                     Console.WriteLine($"Error {error} ");
 
-                AnsiConsole.MarkupLine($"[green]Successfully opened {projectName} with Editor {editor.editorVersion}[/]");
+                AnsiConsole.MarkupLine($"[green]Successfully opened {projectName} with Editor {editor.version}[/]");
 
-                return project.projectName;
+                return project.name;
             }
             catch (Exception ex)
             {

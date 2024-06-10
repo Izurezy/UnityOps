@@ -2,10 +2,10 @@ using Spectre.Console;
 
 namespace UnityOps.Structs
 {
-    public struct UnityProject(string projectName, string unityProjectDirectory, string projectEditorVersion)
+    public struct UnityProject(string name, string projectDirectory, string projectEditorVersion)
     {
-        public string projectName = projectName;
-        public string unityProjectDirectory = unityProjectDirectory;
+        public string name = name;
+        public string projectDirectory = projectDirectory;
         public string projectEditorVersion = projectEditorVersion;
 
         public static UnityProject FindProjectByProjectName(string projectName, List<UnityProject> unityProjects)
@@ -16,7 +16,7 @@ namespace UnityOps.Structs
                 return default;
             }
 
-            return unityProjects.FirstOrDefault(project => project.projectName == projectName);
+            return unityProjects.FirstOrDefault(project => project.name == projectName);
 
         }
     }

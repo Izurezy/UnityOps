@@ -14,21 +14,12 @@ namespace UnityOps.Utilities
             //Linux   Applications/Unity/Hub/Editor/<version>/Unity.app/Contents/Linux/Unity -projectPath <project path>
             List<UnityEditor> editors = new();
             UnityEditor unityEditor = new();
-            if (string.IsNullOrEmpty(unityEditorsRootDirectory))
-            {
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                    unityEditorsRootDirectory = "C:/Program Files/Unity/Hub/Editor/<version>/Editor/Unity.exe";
-
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                    unityEditorsRootDirectory = "Applications/Unity/Hub/Editor/<version>/Unity.app/Contents/Linux/Unity";
-            }
-
             try
             {
                 var subDirectories = Directory.GetDirectories(unityEditorsRootDirectory);
 
                 if (Program.isDebugging)
-                    AnsiConsole.MarkupLine($"[yellow][[Unity Editors Install Directory]][/] {unityEditorsRootDirectory}");
+                    AnsiConsole.MarkupLine($"[green][[Unity Editors Install Directory]][/] {unityEditorsRootDirectory}");
 
                 foreach (var subDirectory in subDirectories)
                 {
@@ -47,8 +38,8 @@ namespace UnityOps.Utilities
 
                     if (Path.Exists(unityExecutableFile))
                     {
-                        unityEditor.editorExecutableDirectory = Path.Combine(unityEditorsRootDirectory, unityExecutableFile);
-                        unityEditor.editorVersion = Path.GetFileName(subDirectory.TrimEnd(Path.DirectorySeparatorChar));
+                        unityEditor.executableDirectory = Path.Combine(unityEditorsRootDirectory, unityExecutableFile);
+                        unityEditor.version = Path.GetFileName(subDirectory.TrimEnd(Path.DirectorySeparatorChar));
                         editors.Add(unityEditor);
                     }
                     else if (Program.isDebugging)
@@ -56,8 +47,8 @@ namespace UnityOps.Utilities
 
                     if (Program.isDebugging)
                     {
-                        AnsiConsole.MarkupLine($"[yellow][[Unity Editor Executable Directory]][/] {unityExecutableFile}");
-                        AnsiConsole.MarkupLine($"[yellow][[Editor Version]][/] {unityEditor.editorVersion}\n");
+                        AnsiConsole.MarkupLine($"[green][[Unity Editor Executable Directory]][/] {unityExecutableFile}");
+                        AnsiConsole.MarkupLine($"[green][[Editor Version]][/] {unityEditor.version}\n");
                     }
                 }
 
@@ -76,7 +67,7 @@ namespace UnityOps.Utilities
 
             foreach (var project in unityProjects)
             {
-                if (project.projectEditorVersion == unityEditor.editorVersion && project.projectEditorVersion != null && unityEditor.editorVersion != null)
+                if (project.projectEditorVersion == unityEditor.version && project.projectEditorVersion != null && unityEditor.version != null)
                     ProjectsMadeWithEditor++;
                 else
                     AnsiConsole.MarkupLine($"[yellow]No matching editor found for project version {project.projectEditorVersion}[/]");
