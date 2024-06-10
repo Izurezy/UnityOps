@@ -10,8 +10,13 @@ public class SettingsModel
     public string unityEditorsRootDirectory = string.Empty;
     public string lastProjectOpenedName = string.Empty;
     public bool shouldOpenRecentProject = false;
+
     public List<UnityProject> unityProjects = new();
     public List<UnityEditor> unityEditors = new();
+    public List<UnityProject> hiddenUnityProjects = new();
+    public List<UnityEditor> hiddenUnityEditors = new();
+    public List<Application> applications = new();
+
     public string configFilePath = Path.Combine(Environment.CurrentDirectory, "Settings.json");
 
     public static async Task ConfigureSettings(SettingsModel savedData)

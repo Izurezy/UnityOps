@@ -1,23 +1,19 @@
-using System.Diagnostics.Contracts;
-
-using System.Linq;
 using Spectre.Console;
-using UnityOps.Structs;
 
 namespace UnityOps.Utilities
 {
     public class InputUtility
     {
-
-        public static string SelectionPrompt<T>(string question, List<T> choicesList, Func<T, string> displaySelector)
+        //Takes in a list of type T and iterate over it and puts a choices.... 
+        public static string ListItemsForSelectionPrompt<T>(string question, List<T> choiceList, Func<T, string> displaySelector)
         {
             try
             {
-                var choicesListNew = new List<string>();
-                foreach (var item in choicesList)
-                    choicesListNew.Add(displaySelector(item));
+                var choiceListNew = new List<string>();
+                foreach (var item in choiceList)
+                    choiceListNew.Add(displaySelector(item));
 
-                string[] choices = choicesListNew.ToArray();
+                string[] choices = choiceListNew.ToArray();
 
                 string selection = AnsiConsole.Prompt(
                     new SelectionPrompt<string>()
@@ -33,6 +29,17 @@ namespace UnityOps.Utilities
                 AnsiConsole.WriteException(ex);
                 return string.Empty;
             }
+        }
+
+        public static string MainMenuSelectionPrompt()
+        {
+            return AnsiConsole.Prompt(
+                new SelectionPrompt<string>().
+                AddChoices([
+                    "Config", "Open Project", "Add Application to Open", "Add or Remove Project", "Add or Remove Editor"
+                ]
+            ));
+
         }
     }
 }
