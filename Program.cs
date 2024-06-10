@@ -53,7 +53,6 @@ public class Program
             await SettingsModel.ConfigureSettings(savedData);
             savedData = await DataManager.LoadFromJsonFile<SettingsModel>(defaultSettingsPath);
         }
-        OpenApplication("C:/Users/rryan/AppData/Local/Programs/Notion/Notion.exe");
 
         string selection = InputUtility.MainMenuSelectionPrompt();
 
