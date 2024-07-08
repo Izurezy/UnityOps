@@ -1,50 +1,37 @@
+#region
 using Spectre.Console;
+using UnityOps.Models;
 using UnityOps.Utilities;
+#endregion
 
 namespace UnityOps
 {
     public class ArgumentHandler
     {
-        private static SettingsModel savedData;
-        private static SettingsModel unsavedData = new();
-
-        public static async Task CheckArgsAsync(string[] args, SettingsModel SavedData)
+        public static async Task CheckArgsAsync(string[] args)
         {
-            savedData = SavedData;
-            if (savedData != null)
+            ExecuteIfArgumentPresent(args, ["-d", "-debug"], () => Program.isDebugging = true);
+            ExecuteIfArgumentPresent(args, ["-h", "-help"], HelpMessage, true);
+            await ExecuteIfArgumentPresentAsync(args, ["-config"], Configurator.ConfigureSettings, true);
+
+            if (!await DataManager.IsDataPresentInConfigFileAsync())
             {
-                ExecuteIfArgumentPresent(args, ["-d", "-debug"], () => Program.isDebugging = true);
-                ExecuteIfArgumentPresent(args, ["-h", "-help"], HelpMessage, true);
-                await ExecuteIfArgumentPresentAsync(args, ["-config"], async () => await SettingsModel.ConfigureSettings(savedData), true);
-                await ExecuteIfArgumentPresentAsync(args, ["-f", "-find"], FindUnityProjectsAndEditorsAndDisplay, false);
-                await ExecuteIfArgumentPresentAsync(args, ["-a", "-auto"], ToggleShouldOpenRecentProject, true);
-                await ExecuteIfArgumentPresentAsync(args, ["-o", "-open"], OpenProjectAsync, true);
+                AnsiConsole.MarkupLine($"[{Program.ErrorColor}][[Data Manager]][/] No data is found within Settings.json!");
+                AnsiConsole.MarkupLine($"[{Program.ErrorColor}][[Data Manager]][/] Please run UnityOps -config");
+                Environment.Exit(1);
             }
-            else if (savedData == null)
-                AnsiConsole.MarkupLine($"[red]Saved Data is null, please run UnityOps -config[/]");
-        }
 
+            await ExecuteIfArgumentPresentAsync(args, ["-p", "-petty"], async () => await TogglePettyTables());
+            await ExecuteIfArgumentPresentAsync(args, ["-a", "-auto"], UnityProjectUtility.ToggleShouldOpenRecentProjectAsync);
+            await ExecuteIfArgumentPresentAsync(args, ["-f", "-find"], Program.FindUnityProjectsAndEditorsAndDisplay, true);
+            await ExecuteIfArgumentPresentAsync(args, ["-o", "-open"], async () =>
+            {
+                if (!DataManager.DoesUnityProjectAndEditorExist())
+                    await Program.FindUnityProjectsAndEditorsAndDisplay();
 
-        #region  Arguments Methods
-        private static async Task ToggleShouldOpenRecentProject()
-        {
-            Console.WriteLine($"Before toggle: {savedData.shouldOpenRecentProject}");
-            unsavedData.shouldOpenRecentProject = !savedData.shouldOpenRecentProject;
-
-            Console.WriteLine($"Open Recent Project is {unsavedData.shouldOpenRecentProject}");
-            await DataManager.UpdateJsonSectionAsync(unsavedData.shouldOpenRecentProject, nameof(unsavedData.shouldOpenRecentProject), savedData.configFilePath);
-        }
-        private static async Task OpenProjectAsync()
-        {
-            Console.WriteLine("Open projects");
-
-            unsavedData.lastProjectOpenedName = UnityProjectUtility.OpenUnityProject(savedData.unityProjects, savedData.unityEditors, savedData.shouldOpenRecentProject, savedData.lastProjectOpenedName);
-            await DataManager.UpdateJsonSectionAsync(unsavedData.lastProjectOpenedName, nameof(unsavedData.lastProjectOpenedName), savedData.configFilePath);
-        }
-        private static async Task FindUnityProjectsAndEditorsAndDisplay()
-        {
-            (unsavedData.unityProjects, unsavedData.unityEditors) = await Program.FindUnityProjectsAndEditors();
-            DisplayUtility.DisplayEditorsAndProjectInTable(unsavedData.unityEditors, unsavedData.unityProjects);
+                await UnityProject.OpenAsync(DataManager.savedData.unityProjects, DataManager.savedData.unityEditors, DataManager.savedData.shouldOpenRecentProject, DataManager.savedData.lastProjectOpenedName);
+            }
+            , true);
         }
 
         private static void HelpMessage()
@@ -54,20 +41,18 @@ namespace UnityOps
             table.Title("Commands!");
             table.AddColumn("Option");
             table.AddColumn(new TableColumn("Description").Centered());
-
-            table.AddRow("-d | -debug", "Enables debugging");
-            table.AddRow("-h | -help", "Show command line help");
-            table.AddRow("-f | -find", "Looks for Unity Projects and Editors");
-            table.AddRow("-o | -open", "Opens a Unity Project or the most recent project if the toggle is on");
-            table.AddRow("-a | -auto", "Toggles whether -o | -open should open the most recent project. ");
             table.AddRow("-config", "Shows an interactive configurator");
+            table.AddRow("-d | -debug", "Enables debugging");
+            table.AddRow("-f | -find", "Looks for Unity Projects and Editors");
+            table.AddRow("-p | -petty", "Toggles Spectre.Console Tables");
+            table.AddRow("-o | -open", "Opens a Unity Project or the most recent project if toggle on");
+            table.AddRow("-a | -auto", "Toggles whether -o | -open should open the most recent project");
+            table.AddRow("-h | -help", "Shows command line help");
 
             AnsiConsole.WriteLine("\n");
             AnsiConsole.Write(table);
             AnsiConsole.WriteLine("\n");
         }
-
-        #endregion
 
         private static void ExecuteIfArgumentPresent(string[] consoleArgs, string[] targetArgs, Action action, bool exitConsoleApp = false)
         {
@@ -97,6 +82,13 @@ namespace UnityOps
                 }
         }
 
+        private static async Task TogglePettyTables()
+        {
+            bool usePettyTables = !DataManager.savedData.usePettyTables;
+
+            AnsiConsole.MarkupLine($"[{Program.InfoColor}][[Argument Handler]][/] Use Petty Tables: {usePettyTables}");
+            await DataManager.UpdateJsonSectionAsync(usePettyTables, nameof(usePettyTables));
+        }
 
     }
 }

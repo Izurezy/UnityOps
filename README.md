@@ -1,35 +1,53 @@
 # UnityOps
 
-UnityOps is a command-line application designed to streamline your Unity development workflow. It offers functionalities to easily locate Unity Editors and Projects, as well as swiftly launch other essential software tools you use in your daily development tasks.
+UnityOps is a command-line tool to streamline your Unity development workflow. It opens Unity projects along with any
+specified applications that you assign to launch alongside the project.
 
-## Features
+___
 
-- **Effortless Project Launching:** Seamlessly open Unity projects directly from the command line. UnityOps eliminates the need for manual searching and navigation, allowing you to dive straight into your projects with a single command.
+## Installing
 
-- **Enhanced Workflow Integration(Coming Soon):** Beyond Unity, UnityOps extends its functionality to streamline your entire development workflow. It enables you to effortlessly launch other essential software tools integral to your development process, all with a single command.
+1. Download the zip from [Releases](https://github.com/Izurezy/UnityOps/releases) or build it manually (see below).
+2. Unzip the file and add the extracted folder to your system environment variables.
 
-## Why Use UnityOps?
+### Building
 
-UnityOps is designed for those seeking to bypass the manual process of individually launching every application. Instead, with just one command, you can effortlessly open all the tools essential for your daily development workflow.
+1. Clone the project.
+2. Run `dotnet publish -r <RID> --self-contained` within the cloned directory:
+    - Replace `<RID>` with your specific Runtime Identifier (RID). You can find a list of known
+      RIDs [here](https://learn.microsoft.com/en-us/dotnet/core/rid-catalog#known-rids), such as `win-x64` for Windows
+      or `linux-x64` for Linux.
+3. After the build completes, navigate to the publish directory (usually located within the `bin/Release/net8.0` folder)
+   and add the folder containing the built files to your system environment variables.
 
-## Getting Started
+___
 
-To start using UnityOps, follow these simple steps:
+## Usage
 
-1. **Installation:** Download and install UnityOps on your system.
-2. **Configuration:** You **MUST** run `UnityOps -config` then `UnityOps -find` upon you the first time.
-3. **Usage:** `UnityOps -open`, displays a selectable list of projects found that you can open.
-   ![selectable list of projects found, that you can open.](ProjectSelection.png)
+**You MUST run `UnityOps -config` before using the UnityOps.**
 
-**Here are some Arguments**<br/>
+###### **.Lnk extension isn't supported**
 
-- `config` Initiate the configuration process.<br/>
-- `-o or -open` Displays a selectable list of projects found that you can open.<br/>
-- `-a or -auto` Enables auto launching for the last project selected when `UnityOps -o or -open` was ran<br/>
-- `-f or -find` Locate and display all discovered projects and editors along with their version numbers and the number of projects associated with each editor.<br/>
-- `-d or -debug` Enables debugging mode<br/>
-- `-h or -help` Shows a table of available commands<br/>
+### Arguments
 
-## Contributing
+- `-config`: Shows an interactive configurator.
+- `-d` | `-debug`: Enables debugging.
+- `-f` | `-find`: Looks for Unity Projects and Editors.
+- `-p` | `-petty`: Toggles the usage of Spectre.Console tables.
+- `-o` | `-open`: Opens a Unity Project or the most recent project if toggled on.
+- `-a` | `-auto`: Toggles whether `-o` | `-open` should open the most recent project.
+- `-h` | `-help`: Shows command line help.
 
-UnityOps is an open-source project, and contributions are welcome! If you have ideas for new features, improvements, or bug fixes, feel free to submit a pull request or open an issue on our GitHub repository.
+___
+
+## Debugging Color Table
+
+- `blue`: **Point of Something**
+- `deeppink1`: **Information**
+- `yellow`: **Warning**
+- `red`: **Error**
+- `green`: **Success**
+
+---
+
+## Images

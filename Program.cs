@@ -1,110 +1,70 @@
-﻿using System.Diagnostics;
-using System.Runtime.InteropServices.Marshalling;
+﻿#region
 using Spectre.Console;
-using UnityOps.Structs;
+using UnityOps.Models;
 using UnityOps.Utilities;
+#endregion
 
 namespace UnityOps;
 
 public class Program
 {
-    public static bool isDebugging = false;
+    public static bool isDebugging { get; set; }
 
-    public static SettingsModel savedData { get; private set; }
+    public const string InfoColor = "bold deeppink1";
+    public const string InfoColor2 = "bold blue";
+    public const string ErrorColor = "bold red";
+    public const string WarningColor = "bold yellow";
+    public const string SuccessColor = "bold green";
 
-    static SettingsModel unsavedData = new();
-    static readonly string defaultSettingsPath = Path.Combine(Environment.CurrentDirectory, "Settings.json");
-
-    /* ---------------------------------------------------
-                        TODO
-        ------------------------------------------
-            Fix the space in the Configurator
-            Fix Error when changing configuration location
-            Fix get proper permission for saving configuration file in custom directory. Known issue on linux and Window.
-        ------------------------------------------------------------------------------------
-            Refactor SettingsModel
-            revamp the saving system, thats allows the user to select which settings to change
-            test if Opening unity on linux works
-        ------------------------------------------------------------------------------------
-            Add some docs
-            Add descriptions to all foundations 
-            Add an arg that display the current config settings
-        ------------------------------------------------------------------------------------
-            Create a future branch
-            Create Unit test        
-
-            Create a menu for opening project, change project editor version, etc (WIP)
-            Allow the user to select which applications:
-                1. to always open, no matter the project or editor
-                2. they would like to open with a specific unity project or editor
-
-
-        ------------------------------------------------------------------------------------
-            
-     --------------------------------------------------- */
     public static async Task Main(string[] args)
     {
-        savedData = await DataManager.LoadFromJsonFile<SettingsModel>(defaultSettingsPath);
-        await ArgumentHandler.CheckArgsAsync(args, savedData);
+        DataManager.ValidateConfigFile();
 
-        if (savedData == null)
-        {
-            AnsiConsole.MarkupLine("[red]Saved settings is null...starting configuration process[/]");
-            await SettingsModel.ConfigureSettings(savedData);
-            savedData = await DataManager.LoadFromJsonFile<SettingsModel>(defaultSettingsPath);
-        }
+        if (!args.Contains("-config"))
+            await DataManager.LoadSettings();
 
-        string selection = InputUtility.MainMenuSelectionPrompt();
+        await ArgumentHandler.CheckArgsAsync(args);
 
-        switch (selection)
+        switch (InputUtility.MainMenuSelectionPrompt())
         {
             case "Config":
-                await SettingsModel.ConfigureSettings(savedData);
+                await Configurator.ConfigureSettings();
+                break;
+            case "Find Unity Editors and Projects":
+                await FindUnityProjectsAndEditorsAndDisplay();
                 break;
             case "Open Project":
-                UnityProjectUtility.OpenUnityProject(savedData.unityProjects, savedData.unityEditors, savedData.shouldOpenRecentProject, savedData.lastProjectOpenedName);
+                if (!DataManager.DoesUnityProjectAndEditorExist())
+                    await FindUnityProjectsAndEditorsAndDisplay();
+                await UnityProject.OpenAsync(DataManager.savedData.unityProjects, DataManager.savedData.unityEditors, DataManager.savedData.shouldOpenRecentProject, DataManager.savedData.lastProjectOpenedName);
+                Environment.Exit(0);
                 break;
-            case "Add Applications To Open":
-                break;
-            case "Edit Projects":
-                break;
-            case "Edit Editors":
+            case "Manage Applications":
+                await ApplicationUtility.ApplicationManager(DataManager.savedData.applications, DataManager.savedData.unityProjects);
                 break;
             default:
-                AnsiConsole.MarkupLine("[red]selection is null[/]");
+                AnsiConsole.MarkupLine($"[{ErrorColor}][[Main Menu]][/] Selection was null ");
                 break;
         }
     }
 
-    public static async Task<(List<UnityProject>, List<UnityEditor>)> FindUnityProjectsAndEditors()
+    public static async Task FindUnityProjectsAndEditorsAndDisplay()
     {
-        AnsiConsole.MarkupLine("[green]Searching...1\n[/]");
-        unsavedData.unityProjects = await UnityProjectUtility.FindUnityProjects(savedData.unityProjectsRootDirectory, savedData.projectVersionDefaultFilePath);
-        unsavedData.unityEditors = UnityEditorUtility.FindUnityEngines(savedData.unityEditorsRootDirectory);
-
-        await DataManager.UpdateJsonSectionAsync(unsavedData.unityProjects, nameof(unsavedData.unityProjects), savedData.configFilePath);
-        await DataManager.UpdateJsonSectionAsync(unsavedData.unityEditors, nameof(unsavedData.unityEditors), savedData.configFilePath);
-        return (unsavedData.unityProjects, unsavedData.unityEditors);
+        (List<UnityProject> unityProjects, List<UnityEditor> unityEditors) = await FindUnityProjectsAndEditors();
+        DisplayUtility.DisplayFoundEditorsAndProject(unityEditors, unityProjects);
     }
-
-    public static void OpenApplication(string executableFullPath, string arguments = null)
+    private static async Task<(List<UnityProject>, List<UnityEditor>)> FindUnityProjectsAndEditors()
     {
-        try
-        {
-            ProcessStartInfo startInfo = new(executableFullPath, arguments);
-            Process process = new()
-            {
-                StartInfo = startInfo
-            };
-            process.Start();
-            Console.WriteLine("Application Started!!!");
+        AnsiConsole.MarkupLine($"[{InfoColor}]Searching...\n[/]");
+        List<UnityProject> unityProjects = await UnityProjectUtility.FindUnityProjects(DataManager.savedData.unityProjectsRootDirectory, DataManager.savedData.projectVersionDefaultRelativeFilePath);
+        List<UnityEditor> unityEditors = UnityEditorUtility.FindUnityEngines(DataManager.savedData.unityEditorsRootDirectory);
 
-        }
-        catch (Exception e)
-        {
-            AnsiConsole.WriteException(e);
-        }
+        foreach (var project in unityProjects)
+            await DataManager.UpdateUnityProject(project);
+
+        foreach (var editor in unityEditors)
+            await DataManager.UpdateUnityEditor(editor);
+
+        return (unityProjects, unityEditors);
     }
-
 }
-
