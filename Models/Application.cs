@@ -59,9 +59,8 @@ namespace UnityOps.Models
                     if (Path.GetExtension(applicationFullExecutablePath).Equals(".lnk", StringComparison.OrdinalIgnoreCase))
                         return ValidationResult.Error($"[{Program.ErrorColor}].Lnk extension isn't supported[/]");
 
-                    return File.Exists(applicationFullExecutablePath) ? ValidationResult.Error($"[{Program.ErrorColor}]File must exist[/]") : ValidationResult.Success();
+                    return File.Exists(applicationFullExecutablePath) ? ValidationResult.Success() : ValidationResult.Error($"[{Program.ErrorColor}]File must exist[/]");
                 }));
-
 
             string applicationArguments = AnsiConsole.Prompt(
             new TextPrompt<string>($"[{Program.InfoColor2}][[Optional]][/] Application Arguments:")
