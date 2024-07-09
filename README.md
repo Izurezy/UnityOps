@@ -17,14 +17,18 @@ ___
     - Replace `<RID>` with your specific Runtime Identifier (RID). You can find a list of known
       RIDs [here](https://learn.microsoft.com/en-us/dotnet/core/rid-catalog#known-rids), such as `win-x64` for Windows
       or `linux-x64` for Linux.
-3. After the build completes, navigate to the publish directory (usually located within the `bin/Release/net8.0` folder)
+3. After the build completes, navigate to the publishing directory (usually located within the `bin/Release/net8.0`
+   folder)
    and add the folder containing the built files to your system environment variables.
 
 ___
 
 ## Usage
 
-**You MUST run `UnityOps -config` before using the UnityOps.**
+**You MUST run `UnityOps -config` before using UnityOps.**
+
+**Config/Settings File in install directory. e.g.**
+`C:/<path-to-UnityOps-directory>/UnityOps/Settings.json`
 
 ###### **.Lnk extension isn't supported**
 
@@ -51,3 +55,34 @@ ___
 ---
 
 ## Images
+
+#### Main menu
+
+![Main menu](Images/Menus/Main-Menu.png)
+
+#### Config process
+
+![Config process](Images/Config-process.png)
+
+#### Finding Projects & Editors
+
+![Finding Projects & Editors](Images/Finding-projects-n-editors.png)
+
+#### Project Selection & toggle open recent project
+
+![Project Selection & toggle open recent project](Images/Open-project-n-toggle-open-recent.png)
+
+#### Opening application & project
+
+![Opening application & project](Images/opening-applications-along-with-project.png)
+
+#### Application menu
+
+![Application menu](Images/Menus/Application-Menu.png)
+
+#### Adding applications to open with a project
+
+![Select application to add](Images/Application/select-applications-to-add.png)
+![Select Projects to add the application too](Images/Application/select-projects-to-add-the-application-too.png)
+
+
