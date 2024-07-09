@@ -1,63 +1,39 @@
+#region
 using Spectre.Console;
+using UnityOps.Models;
 using UnityOps.Utilities;
+#endregion
 
 namespace UnityOps
 {
     public class ArgumentHandler
     {
-        private static SettingsModel savedData;
-        private static SettingsModel unsavedData;
-
-        public static async Task CheckArgsAsync(string[] args, SettingsModel SavedData)
+        public static async Task CheckArgsAsync(string[] args)
         {
-            if (savedData != null)
+            ExecuteIfArgumentPresent(args, ["-d", "-debug"], () => Program.isDebugging = true);
+            ExecuteIfArgumentPresent(args, ["-h", "-help"], HelpMessage, true);
+            await ExecuteIfArgumentPresentAsync(args, ["-config"], Configurator.ConfigureSettings, true);
+
+            if (!await DataManager.IsDataPresentInConfigFileAsync())
             {
-                savedData = SavedData;
-                ExecuteIfArgumentPresent(args, ["-d", "-debug"], () => Program.isDebugging = true);
-                ExecuteIfArgumentPresent(args, ["-h", "-help"], HelpMessage, true);
-                await ExecuteIfArgumentPresentAsync(args, ["-config"], async () => await SettingsModel.ConfigureSettings(savedData), true);
-                await ExecuteIfArgumentPresentAsync(args, ["-f", "-find"], FindUnityProjectsAndEditors, false);
-                await ExecuteIfArgumentPresentAsync(args, ["-a", "-auto"], ToggleShouldOpenRecentProject, false);
-                await ExecuteIfArgumentPresentAsync(args, ["-o", "-open"], OpenProjectAsync, false);
-            }
-            else
-                AnsiConsole.MarkupLine($"[red]Saved Data is null, please run UnityOps -config[/]");
-        }
-
-        #region  Arguments Methods
-        private static async Task ToggleShouldOpenRecentProject()
-        {
-            if (savedData != null)
-                unsavedData.shouldOpenRecentProject = !savedData.shouldOpenRecentProject;
-
-            Console.WriteLine($"Open Recent Project is {unsavedData.shouldOpenRecentProject}");
-            await DataManager.UpdateJsonSectionAsync(unsavedData.shouldOpenRecentProject, nameof(unsavedData.shouldOpenRecentProject), savedData.configFilePath);
-        }
-        private static async Task OpenProjectAsync()
-        {
-            Console.WriteLine("Open projects");
-            if (savedData.shouldOpenRecentProject)
-            {
-                unsavedData.lastProjectOpenedName = UnityProjectUtility.OpenUnityProject(savedData.lastProjectOpenedName, savedData.unityProjects, savedData.unityEditors);
-                return;
+                AnsiConsole.MarkupLine($"[{Program.ErrorColor}][[Data Manager]][/] No data is found within Settings.json!");
+                AnsiConsole.MarkupLine($"[{Program.ErrorColor}][[Data Manager]][/] Please run UnityOps -config");
+                Environment.Exit(1);
             }
 
+            await ExecuteIfArgumentPresentAsync(args, ["-p", "-petty"], async () => await TogglePettyTables());
+            await ExecuteIfArgumentPresentAsync(args, ["-a", "-auto"], UnityProjectUtility.ToggleShouldOpenRecentProjectAsync);
+            await ExecuteIfArgumentPresentAsync(args, ["-f", "-find"], Program.FindUnityProjectsAndEditorsAndDisplay, true);
+            await ExecuteIfArgumentPresentAsync(args, ["-o", "-open"], async () =>
+            {
+                if (!DataManager.DoesUnityProjectAndEditorExist())
+                    await Program.FindUnityProjectsAndEditorsAndDisplay();
 
-            string projectName = InputUtility.SelectionPrompt("Which Project to open?", savedData.unityProjects, project => project.projectName);
-            unsavedData.lastProjectOpenedName = UnityProjectUtility.OpenUnityProject(projectName, savedData.unityProjects, savedData.unityEditors);
-            await DataManager.UpdateJsonSectionAsync(unsavedData.lastProjectOpenedName, nameof(unsavedData.lastProjectOpenedName), savedData.configFilePath);
+                await UnityProject.OpenAsync(DataManager.savedData.unityProjects, DataManager.savedData.unityEditors, DataManager.savedData.shouldOpenRecentProject, DataManager.savedData.lastProjectOpenedName);
+            }
+            , true);
         }
-        private static async Task FindUnityProjectsAndEditors()
-        {
-            AnsiConsole.MarkupLine("[green]Searching...\n[/]");
-            unsavedData.unityProjects = await UnityProjectUtility.FindUnityProjects(savedData.unityProjectsRootDirectory, savedData.projectVersionDefaultFilePath);
-            unsavedData.unityEditors = UnityEditorUtility.FindUnityEngines(savedData.unityEditorsRootDirectory);
 
-            await DataManager.UpdateJsonSectionAsync(unsavedData.unityProjects, nameof(unsavedData.unityProjects), savedData.configFilePath);
-            await DataManager.UpdateJsonSectionAsync(unsavedData.unityEditors, nameof(unsavedData.unityEditors), savedData.configFilePath);
-
-            DisplayUtility.DisplayEditorsAndProjectInTable(unsavedData.unityEditors, unsavedData.unityProjects);
-        }
         private static void HelpMessage()
         {
             var table = new Table();
@@ -65,20 +41,18 @@ namespace UnityOps
             table.Title("Commands!");
             table.AddColumn("Option");
             table.AddColumn(new TableColumn("Description").Centered());
-
-            table.AddRow("-d | -debug", "Enables debugging");
-            table.AddRow("-h | -help", "Show command line help");
-            table.AddRow("-f | -find", "Looks for Unity Projects and Editors");
-            table.AddRow("-o | -open", "Opens a Unity Project or the most recent project if the toggle is on");
-            table.AddRow("-a | -auto", "Toggles whether -o | -open should open the most recent project. ");
             table.AddRow("-config", "Shows an interactive configurator");
+            table.AddRow("-d | -debug", "Enables debugging");
+            table.AddRow("-f | -find", "Looks for Unity Projects and Editors");
+            table.AddRow("-p | -petty", "Toggles Spectre.Console Tables");
+            table.AddRow("-o | -open", "Opens a Unity Project or the most recent project if toggle on");
+            table.AddRow("-a | -auto", "Toggles whether -o | -open should open the most recent project");
+            table.AddRow("-h | -help", "Shows command line help");
 
             AnsiConsole.WriteLine("\n");
             AnsiConsole.Write(table);
             AnsiConsole.WriteLine("\n");
         }
-
-        #endregion
 
         private static void ExecuteIfArgumentPresent(string[] consoleArgs, string[] targetArgs, Action action, bool exitConsoleApp = false)
         {
@@ -108,6 +82,13 @@ namespace UnityOps
                 }
         }
 
+        private static async Task TogglePettyTables()
+        {
+            bool usePettyTables = !DataManager.savedData.usePettyTables;
+
+            AnsiConsole.MarkupLine($"[{Program.InfoColor}][[Argument Handler]][/] Use Petty Tables: {usePettyTables}");
+            await DataManager.UpdateJsonSectionAsync(usePettyTables, nameof(usePettyTables));
+        }
 
     }
 }
